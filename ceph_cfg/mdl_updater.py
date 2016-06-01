@@ -271,7 +271,9 @@ class model_updater():
                 if len(part_line) == 0:
                     continue
                 part_line_split = part_line.split(':')
+                part_path = disk_line_split[0] + part_line_split[0]
                 part_line_dict = {
+                    'Path' : part_path,
                     'Number' : part_line_split[0],
                     'Start' : part_line_split[1],
                     'End' : part_line_split[2],
@@ -279,7 +281,7 @@ class model_updater():
                     'File system' : part_line_split[4],
                     'Flags' : part_line_split[4].split(',')
                 }
-                parted_dict_disk['partition'][part_line_split[0]] = part_line_dict
+                parted_dict_disk['partition'][part_path] = part_line_dict
             parted_dict[disk_line_split[0]] = parted_dict_disk
         self.model.parted = parted_dict
 
