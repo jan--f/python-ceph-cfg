@@ -234,7 +234,6 @@ class model_updater():
             '-l',
             'print'
             ]
-        log.debug("Running:%s" % (" ".join(arguments)))
         output = utils.execute_local_command(arguments)
         if output["retcode"] != 0:
             raise Error("Failed executing '%s' Error rc=%s, stdout=%s stderr=%s" % (
@@ -259,8 +258,11 @@ class model_updater():
             disk_line_split = chunk_list[1].split(':')
             parted_dict_disk = {
                 'disk' : disk_line_split[0],
+                'size' : disk_line_split[1],
+                'driver' : disk_line_split[2],
                 'sector_size_logical' : disk_line_split[3],
                 'sector_size_physical' : disk_line_split[4],
+                'table' : disk_line_split[5],
                 'vendor' : disk_line_split[6],
                 'partition' : {}
                 }
