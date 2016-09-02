@@ -1,4 +1,5 @@
-# Python imports
+# Import Python Libs
+from __future__ import absolute_import
 import logging
 import os
 import pwd
@@ -7,14 +8,14 @@ import shutil
 import time
 
 # Local imports
-import keyring
-import mdl_query
-import mdl_updater
-import model
-import presenter
-import utils
-import service
-import util_which
+from . import keyring
+from . import mdl_query
+from . import mdl_updater
+from . import model
+from . import presenter
+from . import utils
+from . import service
+from . import util_which
 
 
 log = logging.getLogger(__name__)
@@ -87,13 +88,6 @@ class mon_implementation_base(object):
         """
         Is this a mon node
 
-        CLI Example:
-
-            salt '*' sesceph.keys_create
-                    'cluster_name'='ceph' \
-                    'cluster_uuid'='cluster_uuid' \
-        Notes:
-
         cluster_name
             Set the cluster name. Defaults to "ceph".
 
@@ -115,13 +109,6 @@ class mon_implementation_base(object):
     def status(self, **kwargs):
         """
         Get status from mon deamon
-
-        CLI Example:
-
-            salt '*' sesceph.prepare
-                    'cluster_name'='ceph' \
-                    'cluster_uuid'='cluster_uuid' \
-        Notes:
 
         cluster_uuid
             Set the cluster UUID. Defaults to value found in ceph config file.
@@ -149,18 +136,13 @@ class mon_implementation_base(object):
         """
         Is mon deamon in quorum
 
-        CLI Example:
-
-            salt '*' sesceph.prepare
-                    'cluster_name'='ceph' \
-                    'cluster_uuid'='cluster_uuid' \
-        Notes:
-
-        cluster_uuid
-            Set the cluster UUID. Defaults to value found in ceph config file.
-
-        cluster_name
-            Set the cluster name. Defaults to "ceph".
+        Args:
+            **kwargs: Arbitrary keyword arguments.
+                cluster_uuid
+                    Set the cluster UUID. Defaults to value found in ceph
+                    config file.
+                cluster_name
+                    Set the cluster name. Defaults to "ceph".
         """
         u = mdl_updater.model_updater(self.model)
         u.hostname_refresh()
@@ -217,18 +199,13 @@ class mon_implementation_base(object):
         """
         Create a mon node
 
-        CLI Example:
-
-            salt '*' sesceph.prepare
-                    'cluster_name'='ceph' \
-                    'cluster_uuid'='cluster_uuid' \
-        Notes:
-
-        cluster_uuid
-            Set the cluster UUID. Defaults to value found in ceph config file.
-
-        cluster_name
-            Set the cluster name. Defaults to "ceph".
+        Args:
+            **kwargs: Arbitrary keyword arguments.
+                cluster_uuid
+                    Set the cluster UUID. Defaults to value found in ceph
+                    config file.
+                cluster_name
+                    Set the cluster name. Defaults to "ceph".
         """
         if util_which.which_ceph_mon.path is None:
             raise Error("Could not find executable 'ceph-mon'")
@@ -363,6 +340,7 @@ class mon_implementation_base(object):
                 'service' : "ceph-mon",
             }
             self.init_system.restart(**arguments)
+            self.init_system.on_boot_enable(**arguments)
             self._create_check_retry()
             open(path_done_file, 'a').close()
         finally:

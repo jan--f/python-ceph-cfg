@@ -1,4 +1,5 @@
-# Python imports
+# Import Python Libs
+from __future__ import absolute_import
 import logging
 import os
 import shutil
@@ -6,9 +7,9 @@ import tempfile
 import os.path
 
 # Local imports
-import utils
-import constants
-import util_which
+from . import utils
+from . import constants
+from . import util_which
 
 
 log = logging.getLogger(__name__)
@@ -185,10 +186,10 @@ class keyring_implementation_base(object):
         """
         keyring_path = self.get_path_keyring()
         if os.path.isfile(keyring_path):
+            log.info("Removing:%s" % (keyring_path))
             try:
-                log.info("Removing" , keyring_path)
                 os.remove(keyring_path)
-            except:
+            except OSError:
                 raise Error("Keyring could not be deleted")
         return True
 
@@ -314,9 +315,9 @@ class keyring_facard(object):
                 raise ValueError("Programming error for key_type with value:%s" % (name))
             try:
                 implementation.get_path_keyring()
-            except Error, e:
+            except (Error) as err:
                 self._clear_implementation()
-                raise e
+                raise err
             self._keyImp = implementation
             self._keyType = name
             return self._keyType

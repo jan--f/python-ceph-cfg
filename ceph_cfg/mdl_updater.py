@@ -1,3 +1,6 @@
+# Import Python Libs
+from __future__ import absolute_import
+
 # Python imports
 import os
 import os.path
@@ -6,12 +9,15 @@ import logging
 import shlex
 import tempfile
 import json
-import ConfigParser
+try:
+    import ConfigParser
+except:
+    import configparser as ConfigParser
 
 # local modules
-import constants
-import utils
-import util_which
+from . import constants
+from . import utils
+from . import util_which
 
 
 log = logging.getLogger(__name__)
@@ -183,13 +189,9 @@ class model_updater():
             ]
 
 
-    def partitions_all_refresh(self):
+    def partitions_all_refresh_lsblk(self):
         '''
-        List all partition details
-
-        CLI Example:
-
-            salt '*' sesceph.partitions_all
+        List all partition details using lsblk
         '''
         part_map = {}
         cmd = [ util_which.which_lsblk.path ] + self._lsblk_arguements()
@@ -227,40 +229,82 @@ class model_updater():
         self.model.part_pairent = part_map
 
 
-    def partition_table_refresh(self):
-        for disk_name in self.model.lsblk.keys():
-            arguments = [
-                'parted',
-                disk_name,
-                'print'
-                ]
-            log.debug("Running:%s" % (" ".join(arguments)))
-            output = utils.execute_local_command(arguments)
-            if output["retcode"] != 0:
-                raise Error("Failed executing '%s' Error rc=%s, stdout=%s stderr=%s" % (
-                    " ".join(arguments),
-                    output["retcode"],
-                    output["stdout"],
-                    output["stderr"]
-                    ))
-            part_type = None
-            for line in output["stdout"].split('\n'):
-                split_line = line.split(':')
-                if split_line[0] != 'Partition Table':
+    def partitions_all_refresh_parted(self):
+        '''
+        List all partition details using parted
+        '''
+        arguments = [
+            util_which.which_parted.path,
+            '-s',
+            '-m',
+            '-l',
+            'print'
+            ]
+        output = utils.execute_local_command(arguments)
+        if output["retcode"] != 0:
+            raise Error("Failed executing '%s' Error rc=%s, stdout=%s stderr=%s" % (
+                " ".join(arguments),
+                output["retcode"],
+                output["stdout"],
+                output["stderr"]
+                ))
+        lines = output["stdout"].split('\n')
+        lines_num = len(lines)
+        if lines_num == 0:
+            return
+        chunk_lines = []
+        chunk_end = int(lines_num - 1)
+        for line_num in list(reversed(range(lines_num))):
+            if lines[line_num] == 'BYT;':
+                chunk_lines.append((int(line_num), chunk_end))
+                chunk_end = int(line_num)
+        parted_dict = {}
+        for chunk_start,chunk_end  in chunk_lines:
+            chunk_list = lines[chunk_start:chunk_end]
+            disk_line_split = chunk_list[1].split(':')
+            parted_dict_disk = {
+                'disk' : disk_line_split[0],
+                'size' : disk_line_split[1],
+                'driver' : disk_line_split[2],
+                'sector_size_logical' : disk_line_split[3],
+                'sector_size_physical' : disk_line_split[4],
+                'table' : disk_line_split[5],
+                'vendor' : disk_line_split[6],
+                'partition' : {}
+                }
+
+
+            for chunk_line in range(2,len(chunk_list)):
+                part_line = chunk_list[chunk_line]
+                if len(part_line) == 0:
                     continue
-                part_type = ":".join(split_line[1:]).strip()
-            if part_type is None:
-                continue
-            self.model.lsblk[disk_name]["PARTTABLE"] = part_type
+                part_line_split = part_line.split(':')
+                part_path = disk_line_split[0] + part_line_split[0]
+                part_line_dict = {
+                    'Path' : part_path,
+                    'Number' : part_line_split[0],
+                    'Start' : part_line_split[1],
+                    'End' : part_line_split[2],
+                    'Size' : part_line_split[3],
+                    'File system' : part_line_split[4],
+                    'Flags' : part_line_split[4].split(',')
+                }
+                parted_dict_disk['partition'][part_path] = part_line_dict
+            parted_dict[disk_line_split[0]] = parted_dict_disk
+        self.model.parted = parted_dict
+
+
+    def partitions_all_refresh(self):
+        '''
+        List all partition details
+        '''
+        self.partitions_all_refresh_lsblk()
+        self.partitions_all_refresh_parted()
 
 
     def discover_partitions_refresh(self):
         '''
         List all OSD and journal partitions
-
-        CLI Example:
-
-            salt '*' sesceph.discover_osd_partitions
         '''
         osd_all = set()
         journal_all = set()
@@ -341,20 +385,13 @@ class model_updater():
         try:
             mon_initial_members_name_raw = self.model.ceph_conf.get("global","mon_initial_members")
         except ConfigParser.NoSectionError:
-            raise Error("Cluster config file does not set mon_initial_members")
+            raise Error("Cluster config file does not have a [global] section")
         except ConfigParser.NoOptionError:
             raise Error("Cluster config file does not set mon_initial_members")
         mon_initial_members_name_cleaned = []
 
         for mon_split in mon_initial_members_name_raw.split(","):
             mon_initial_members_name_cleaned.append(mon_split.strip())
-        hostname = platform.node().split('.')[0]
-
-        try:
-            mon_initial_members_name_cleaned.index(hostname)
-        except:
-            log.debug("Mon not needed on %s" % (hostname))
-            return True
         try:
             mon_initial_members_addr_raw = self.model.ceph_conf.get("global","mon_host")
         except ConfigParser.NoOptionError:

@@ -1,4 +1,8 @@
-import ConfigParser
+# Import Python Libs
+from __future__ import absolute_import
+
+# local modules
+from . util_configparser import ConfigParserCeph as ConfigParser
 
 
 class version(object):
@@ -21,6 +25,13 @@ class version(object):
         return "<version(%s,%s,%s,%s)>" % (self.major, self.minor, self.revision, self.uuid)
 
 
+class connection(object):
+    def __init__(self, **kwargs):
+        self.keyring_type = kwargs.get("keyring_type")
+        self.keyring_path = kwargs.get("keyring_path")
+        self.keyring_identity = kwargs.get("keyring_identity")
+
+
 class model(object):
     """
     Basic model class to store detrived data
@@ -28,12 +39,15 @@ class model(object):
     def __init__(self, **kwargs):
         # map device to symlinks
         self.symlinks = {}
+        # Discovered partions with lsblk
         self.lsblk = {}
+        # Discovered partions with parted
+        self.parted = {}
         # map partition to pairent
         self.part_pairent = {}
         self.partitions_osd = {}
         self.partitions_journal = {}
-        self.ceph_conf = ConfigParser.ConfigParser()
+        self.ceph_conf = ConfigParser()
         # list of (hostname,addr) touples
         self.mon_members = []
         self.hostname = None
@@ -42,6 +56,8 @@ class model(object):
         self.lsblk_version = version()
         # Result of local query of mon status
         self.mon_status = None
+        # Remote connection details
+        self.connection = connection()
 
 
     def kargs_apply(self, **kwargs):

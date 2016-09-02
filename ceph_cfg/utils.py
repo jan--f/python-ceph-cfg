@@ -1,8 +1,12 @@
+# Import Python Libs
+from __future__ import absolute_import
 import logging
 import os
-import ConfigParser
 import base64
 import binascii
+
+# local modules
+from . util_configparser import ConfigParserCeph as ConfigParser
 
 __has_salt = True
 
@@ -53,7 +57,7 @@ def _get_cluster_uuid_from_name(cluster_name):
     configfile = "/etc/ceph/%s.conf" % (cluster_name)
     if not os.path.isfile(configfile):
         raise Error("Cluster confg file does not exist:'%s'" % configfile)
-    config = ConfigParser.ConfigParser()
+    config = ConfigParser()
     config.read(configfile)
     try:
         fsid = config.get("global","fsid")
@@ -68,9 +72,7 @@ def _get_cluster_name_from_uuid(cluster_uuid):
         if file_name[-5:] != ".conf":
             continue
         fullpath = os.path.join("/etc/ceph/", file_name)
-        print fullpath
-
-        config = ConfigParser.ConfigParser()
+        config = ConfigParser()
         config.read(fullpath)
         try:
             fsid = config.get("global","fsid")
